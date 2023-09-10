@@ -1,8 +1,10 @@
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from seed import session
 
-# SQLAlchemy database engine (adjust the database URL as needed)
+
+# SQLAlchemy database engine
 DATABASE_URL = "sqlite:///restaurant_reviews.db"
 engine = create_engine(DATABASE_URL)
 
@@ -28,6 +30,15 @@ class Restaurant(Base):
         # Returns a collection of all the reviews for the restaurant
         return self.reviews
 
+    @classmethod
+    def fanciest(cls):
+        # Find the restaurant with the highest price
+        return session.query(cls).order_by(cls.price.desc()).first()
+
+    def all_reviews(self):
+        # Returns a list of formatted review strings for the restaurant
+        return [review.full_review() for review in self.reviews]
+
 # Customer model
 class Customer(Base):
     __tablename__ = 'customers'
@@ -47,6 +58,33 @@ class Customer(Base):
         # Returns a collection of all the reviews that the customer has left
         return self.reviews
 
+    def full_name(self):
+        # Returns the full name of the customer, with the first name and last name joined.
+        return f"{self.first_name} {self.last_name}"
+
+    def favorite_restaurant(self):
+        # Finds the restaurant with the highest star rating from this customer
+        highest_rating = 0
+        favorite_restaurant = None
+
+        for review in self.reviews:
+            if review.rating > highest_rating:
+                highest_rating = review.rating
+                favorite_restaurant = review.restaurant
+
+        return favorite_restaurant
+
+    def add_review(self, restaurant, rating):
+        # Creates a new review for the provided restaurant with the given rating
+        review = Review(restaurant=restaurant, customer=self, rating=rating)
+        session.add(review)
+
+    def delete_reviews(self, restaurant):
+        # Removes all reviews for a specific restaurant
+        reviews_to_delete = [review for review in self.reviews if review.restaurant == restaurant]
+        for review in reviews_to_delete:
+            session.delete(review)
+
 # Review model
 class Review(Base):
     __tablename__ = 'reviews'
@@ -64,14 +102,11 @@ class Review(Base):
     customer = relationship('Customer', back_populates='reviews')
 
     def customer(self):
-        return self.customer 
+        return self.customer  
 
     def restaurant(self):
         return self.restaurant  
 
-# Create the database tables
-Base.metadata.create_all(engine)
+    def full_review(self):
 
-# Create a session to interact with the database
-Session = sessionmaker(bind=engine)
-session = Session()
+        return f"Review for {self.restaurant.name} by {self.customer.full_name()}: {self.rating} stars"

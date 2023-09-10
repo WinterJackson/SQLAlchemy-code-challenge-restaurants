@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models import Restaurant, Customer, Review
 
-# SQLAlchemy database engine (adjust the database URL as needed)
+# SQLAlchemy database engine
 DATABASE_URL = "sqlite:///restaurant_reviews.db"
 engine = create_engine(DATABASE_URL)
 
